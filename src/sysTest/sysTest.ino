@@ -9,61 +9,160 @@
 // Remove definition to use standard Arduino Serial.
 #define Serial NilSerial
 
+
+
+//
+
+
+// The log queue 
+#include <NilFIFO.h>
+NilFIFO<String, 5> logQueue;
+boolean debug=true;
+
+// onst unsigned char *str)
+void log(String msg){
+
+  String* p = logQueue.waitFree(TIME_IMMEDIATE);  
+  if(p==0) {
+    Serial.println("Error Cannot log:"+msg);
+  }else{
+    *p=msg;
+    logQueue.signalData();
+
+  }
+}
+
 //------------------------------------------------------------------------------
-// Declare a stack with 64 bytes beyond context switch and interrupt needs.
-NIL_WORKING_AREA(waWebServerThread, 64);
+// Declare a stack with 128 bytes beyond context switch and interrupt needs.
+NIL_WORKING_AREA(waWebServerThread, 128);
+
+
+// WEB SERVER
+
+#include "SPI.h"
+#include "Ethernet.h"
+
+// Debug incoming connection on serial port.
+#define WEBDUINO_SERIAL_DEBUGGING 1
+#include <WebServer.h>
+// no-cost stream operator as described at 
+// http://sundial.org/arduino/?page_id=119
+template<class T>
+inline Print &operator <<(Print &obj, T arg)
+{ obj.print(arg); return obj; }
+
+
+// CHANGE THIS TO YOUR OWN UNIQUE VALUE
+static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+
+// CHANGE THIS TO MATCH YOUR HOST NETWORK
+static uint8_t ip[] = { 192, 168, 1, 210 };
+#define PREFIX ""
+
+WebServer webserver(PREFIX, 80);
+
+//////////////////////////////////
 
 // Declare thread function for thread 1.
-NIL_THREAD(WebServerThread, arg) {
+NIL_THREAD(WebServerThread, arg) {  
 
-  while (TRUE) {
   
+  
+  while(TRUE) {
+    nilThdSleep(600); 
+    log("W+");
+  }
+
+/*
+  // set pins 0-8 for digital input
+  for (int i = 0; i <= 9; ++i)
+    pinMode(i, INPUT);
+  pinMode(9, OUTPUT);
+
+  Ethernet.begin(mac, ip);
+  webserver.begin();
+
+  // webserver.setDefaultCommand(&defaultCmd);
+
+  log("WebServer Configured");
+  while (TRUE) {    
+    // process incoming connections one at a time forever
+    webserver.processConnection();
+    //log("Serving...");
     // Sleep so lower priority threads can execute.
-    nilThdSleep(100);
-    
+    nilThdSleep(2000);    
     // Dummy use of CPU - use nilThdSleep in normal app.
     //Serial.print("Dummy Web Server Processing...");
     //nilThdDelay(100);
     //Serial.print("...done");
+    log("WebServer Loop finished");
   }
+*/
 }
 //------------------------------------------------------------------------------
-// Declare a stack with 64 bytes beyond context switch and interrupt needs.
-NIL_WORKING_AREA(waBlinkHeartBeatThread, 64);
+// Declare a stack with 4 bytes beyond context switch and interrupt needs.
+// HeartBeat needs very little
+NIL_WORKING_AREA(waBlinkHeartBeatThread, 4);
+
+// P(hok)="HeartBeat \\/";
 
 // Declare thread function for HeartBeat.
-// If the blinks is every second, you can be sure it is working well
+// If the blinks fast, you can be sure it is working well
 NIL_THREAD(BlinkHeartBeatThread, arg) {
   // Setup my led 
   pinMode(13, OUTPUT);
-  while (TRUE) {
-    
-    //Serial.print("-");    
+  while (TRUE) {    
     
     digitalWrite(13, HIGH);     
-    nilThdSleep(500);
-    //Serial.print("/");
+    nilThdSleep(100);
     digitalWrite(13, LOW); 
-    nilThdSleep(500);
-    //Serial.print("\\");
-
+    nilThdSleep(100);    
+    log("H+");
   }
 }
 //------------------------------------------------------------------------------
 // Declare a stack with 64 bytes beyond context switch and interrupt needs.
 NIL_WORKING_AREA(waLoggingThread, 64);
 
-// Declare thread function for thread 3.
-NIL_THREAD(LoggingThread, arg) {
+// Declare thread function for Logging thread
 
+boolean CompactPrint=false;
+NIL_THREAD(LoggingThread, arg) {
+  int sleepCompensator=200; // Sleep value
+  P(SYS_VERSION)=" Eva00 Universal Web Prober [SysTest]";
+  Serial.println((char*)SYS_VERSION);
+  nilPrintUnusedStack(&Serial);   
   while (TRUE) {
 
-    // Sleep so lower priority threads can execute.
-    nilThdSleep(900);
-    //nilPrintStackSizes(&Serial);
-    nilPrintUnusedStack(&Serial);
-
-  }
+    /*Serial.print("LOG SLEEPING:");
+    Serial.print(sleepCompensator);
+    Serial.print(" ");
+    nilPrintUnusedStack(&Serial); */
+    //nilThdSleep(sleepCompensator);
+    
+    String *p= logQueue.waitData(TIME_IMMEDIATE);
+    if(!p) {
+      /// No data.... hum not working very well     
+      Serial.print("[LOG Nothing] ");    
+      nilPrintUnusedStack(&Serial);  
+      // Sleep so lower priority threads can execute.
+      nilThdSleep(sleepCompensator);
+    }else{
+      String msg=*p;
+      if(msg.length()!=0){
+        Serial.print("[LOG] ");
+        Serial.print(msg);
+        if(logQueue.freeCount() <=1){
+          Serial.print(" Log Free count:");
+          Serial.print(logQueue.freeCount());
+          //Serial.print(" LogSize:");
+          //Serial.println(msg.length());         
+        }
+        Serial.print("\n");
+      }     
+      logQueue.signalFree();
+    }    
+  } // while
 }
 //------------------------------------------------------------------------------
 /*
@@ -76,7 +175,8 @@ NIL_THREAD(LoggingThread, arg) {
 NIL_THREADS_TABLE_BEGIN()
 NIL_THREADS_TABLE_ENTRY(NULL, WebServerThread, NULL, waWebServerThread, sizeof(waWebServerThread))
 
-// Used for serial communication reporting and general logging
+// Used for serial communication reporting and general logging: move its priority up or down 
+// it is quite complex to accompish minimal noise
 NIL_THREADS_TABLE_ENTRY(NULL, LoggingThread, NULL, waLoggingThread, sizeof(waLoggingThread))
 
 // Always last because it is the lower priority guy
@@ -89,6 +189,7 @@ void setup() {
 
   Serial.begin(9600);
   // start kernel
+  Serial.println("Setup()::: ARDUINO RESET");
   nilSysBegin();
 }
 //------------------------------------------------------------------------------
