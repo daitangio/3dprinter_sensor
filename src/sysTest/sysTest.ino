@@ -11,23 +11,23 @@
 
 
 
-//
-
+#include <sensor_subsystem.h>
+// -------------------------
 
 // The log queue 
 #include <NilFIFO.h>
-NilFIFO<String, 5> logQueue;
+NilFIFO<String, 5> LogQueue;
 boolean debug=true;
 
 // onst unsigned char *str)
 void log(String msg){
 
-  String* p = logQueue.waitFree(TIME_IMMEDIATE);  
+  String* p = LogQueue.waitFree(TIME_IMMEDIATE);  
   if(p==0) {
     Serial.println("Error Cannot log:"+msg);
   }else{
     *p=msg;
-    logQueue.signalData();
+    LogQueue.signalData();
 
   }
 }
@@ -104,7 +104,8 @@ NIL_THREAD(WebServerThread, arg) {
 // HeartBeat needs very little
 NIL_WORKING_AREA(waBlinkHeartBeatThread, 4);
 
-// P(hok)="HeartBeat \\/";
+
+MSG(hok)="HeartBeat \\/";
 
 // Declare thread function for HeartBeat.
 // If the blinks fast, you can be sure it is working well
@@ -117,7 +118,7 @@ NIL_THREAD(BlinkHeartBeatThread, arg) {
     nilThdSleep(100);
     digitalWrite(13, LOW); 
     nilThdSleep(100);    
-    log("H+");
+    log(hok);
   }
 }
 //------------------------------------------------------------------------------
@@ -126,11 +127,12 @@ NIL_WORKING_AREA(waLoggingThread, 64);
 
 // Declare thread function for Logging thread
 
+MSG(SYS_VERSION)=" Eva00 Universal Web Prober [SysTest]";
 boolean CompactPrint=false;
 NIL_THREAD(LoggingThread, arg) {
   int sleepCompensator=200; // Sleep value
-  P(SYS_VERSION)=" Eva00 Universal Web Prober [SysTest]";
-  Serial.println((char*)SYS_VERSION);
+
+  Serial.println(SYS_VERSION);
   nilPrintUnusedStack(&Serial);   
   while (TRUE) {
 
@@ -140,11 +142,11 @@ NIL_THREAD(LoggingThread, arg) {
     nilPrintUnusedStack(&Serial); */
     //nilThdSleep(sleepCompensator);
     
-    String *p= logQueue.waitData(TIME_IMMEDIATE);
+    String *p= LogQueue.waitData(TIME_IMMEDIATE);
     if(!p) {
       /// No data.... hum not working very well     
       Serial.print("[LOG Nothing] ");    
-      nilPrintUnusedStack(&Serial);  
+      nilPrintUnusedStack(&Serial); 
       // Sleep so lower priority threads can execute.
       nilThdSleep(sleepCompensator);
     }else{
@@ -152,15 +154,15 @@ NIL_THREAD(LoggingThread, arg) {
       if(msg.length()!=0){
         Serial.print("[LOG] ");
         Serial.print(msg);
-        if(logQueue.freeCount() <=1){
+        if(LogQueue.freeCount() <=1){
           Serial.print(" Log Free count:");
-          Serial.print(logQueue.freeCount());
+          Serial.print(LogQueue.freeCount());
           //Serial.print(" LogSize:");
           //Serial.println(msg.length());         
         }
         Serial.print("\n");
       }     
-      logQueue.signalFree();
+      LogQueue.signalFree();
     }    
   } // while
 }

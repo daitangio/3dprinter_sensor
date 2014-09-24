@@ -64,8 +64,9 @@
 
 /**
  * @brief   System assertions.
+ * GG Enabled
  */
-#define NIL_CFG_ENABLE_ASSERTS              FALSE
+#define NIL_CFG_ENABLE_ASSERTS              TRUE
 
 /**
  * @brief   Threads descriptor structure extension.
