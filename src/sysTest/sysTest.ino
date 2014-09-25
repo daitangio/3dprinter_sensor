@@ -12,25 +12,31 @@
 
 
 #include <sensor_subsystem.h>
-// -------------------------
 
-// The log queue 
+// The say queue 
 #include <NilFIFO.h>
 NilFIFO<String, 5> LogQueue;
 boolean debug=true;
 
-// onst unsigned char *str)
-void log(String msg){
-
+// unsigned char *str)
+void say(const char *msg){
+  Serial.print("LOG");
+  Serial.println(msg);
+  //Serial.println(String(msg));
+  //Serial.println(*msg);
+  /*
   String* p = LogQueue.waitFree(TIME_IMMEDIATE);  
   if(p==0) {
-    Serial.println("Error Cannot log:"+msg);
+    Serial.println(String("Error Cannot say:")+msg);
   }else{
     *p=msg;
     LogQueue.signalData();
-
-  }
+    Serial.println(String("SENT")+msg);
+  }*/
 }
+
+// -------------------------
+
 
 //------------------------------------------------------------------------------
 // Declare a stack with 128 bytes beyond context switch and interrupt needs.
@@ -70,7 +76,7 @@ NIL_THREAD(WebServerThread, arg) {
   
   while(TRUE) {
     nilThdSleep(600); 
-    log("W+");
+    say("W+");
   }
 
 /*
@@ -84,41 +90,40 @@ NIL_THREAD(WebServerThread, arg) {
 
   // webserver.setDefaultCommand(&defaultCmd);
 
-  log("WebServer Configured");
+  say("WebServer Configured");
   while (TRUE) {    
     // process incoming connections one at a time forever
     webserver.processConnection();
-    //log("Serving...");
+    //say("Serving...");
     // Sleep so lower priority threads can execute.
     nilThdSleep(2000);    
     // Dummy use of CPU - use nilThdSleep in normal app.
     //Serial.print("Dummy Web Server Processing...");
     //nilThdDelay(100);
     //Serial.print("...done");
-    log("WebServer Loop finished");
+    say("WebServer Loop finished");
   }
 */
 }
 //------------------------------------------------------------------------------
-// Declare a stack with 4 bytes beyond context switch and interrupt needs.
-// HeartBeat needs very little
-NIL_WORKING_AREA(waBlinkHeartBeatThread, 4);
+// HeartBeat needs very little stack
+NIL_WORKING_AREA(waBlinkHeartBeatThread, 64);
 
-
-MSG(hok)="HeartBeat \\/";
+// See http://arduino.cc/en/Reference/PROGMEM for a complete discussion
+prog_char  HeartBeatMsg[] PROGMEM  ="HeartBeat";
 
 // Declare thread function for HeartBeat.
 // If the blinks fast, you can be sure it is working well
 NIL_THREAD(BlinkHeartBeatThread, arg) {
   // Setup my led 
   pinMode(13, OUTPUT);
+  
   while (TRUE) {    
-    
+    say(HeartBeatMsg);    
     digitalWrite(13, HIGH);     
     nilThdSleep(100);
     digitalWrite(13, LOW); 
     nilThdSleep(100);    
-    log(hok);
   }
 }
 //------------------------------------------------------------------------------
@@ -175,7 +180,7 @@ NIL_THREAD(LoggingThread, arg) {
  * null to save RAM since the name is currently not used.
  */
 NIL_THREADS_TABLE_BEGIN()
-NIL_THREADS_TABLE_ENTRY(NULL, WebServerThread, NULL, waWebServerThread, sizeof(waWebServerThread))
+//NIL_THREADS_TABLE_ENTRY(NULL, WebServerThread, NULL, waWebServerThread, sizeof(waWebServerThread))
 
 // Used for serial communication reporting and general logging: move its priority up or down 
 // it is quite complex to accompish minimal noise
