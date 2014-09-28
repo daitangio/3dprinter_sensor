@@ -1,46 +1,53 @@
 #include <EventManager.h>
 #include <pitches_it.h>
+#include <Narcoleptic.h>
 
 const int speakerOut=A5;
+// No interrupts, so can use the non-interrupt safe mode
+EventManager gEM( EventManager::kNotInterruptSafe );
+
 
 // Boot Music
 void taDa(int event, int p){
-  tone(speakerOut,NOTE_SI4);
+  Serial.println("TADA!");
+  tone(speakerOut,NOTE_SI5);
   delay(100);
-  tone(speakerOut,NOTE_LA3);
+  tone(speakerOut,NOTE_LA4);
   delay(100);
-  tone(speakerOut,NOTE_DO2);
+  tone(speakerOut,NOTE_DO3);
   delay(100);
   noTone(speakerOut);
-
+  //gEM.queueEvent( EventManager::kEventUser0, 0);
 
 }
 
-#include <dht11.h>
-dht11 DHT;
-
-#define DHT11_PIN 4       // define a pin for DHT sensor
 
 enum BlinkCmd {
   BlinkOn, BlinkOff
 };
 
+/*** FADER**/
+int led = 9;           // the pin that the LED is attached to
+int brightness = 0;    // how bright the LED is
+int fadeAmount = 5;    // how many points to fade the LED by
 
-// No interrupts, so can use the non-interrupt safe mode
-EventManager gEM( EventManager::kNotInterruptSafe );
+
+
+
+
 
 void setup(){  
  pinMode(13, OUTPUT);
+ pinMode(speakerOut, OUTPUT);
+ pinMode(led, OUTPUT);
  Serial.begin(9600);
- Serial.println("3D Printer OSNF - Open Sensors Network Framework 0.1 ");
- Serial.print("DHT LIBRARY VERSION:");
- Serial.println(DHT11LIB_VERSION);
- Serial.print("SENSOR NAME:");
- Serial.println("OSA1");
+ Serial.println("The 4EggBox");
  Serial.println();
  gEM.addListener( EventManager::kEventUser0, taDa );
  gEM.addListener( EventManager::kEventUser1, blinker );
-
+ 
+ // fire the Tada
+ gEM.queueEvent( EventManager::kEventUser0, 0);
 }
 
 unsigned long lastToggledBlinker;
@@ -62,44 +69,17 @@ void blinker(int event, int cmd){
 }
 
 
-void temperatureListener(int event, int pin){
-  int chktemp =  DHT.read(pin); // DHT.read(DHT11_PIN);
-  switch (chktemp){
-    case DHTLIB_OK:  
-                //Serial.print("OK,\t"); 
-                {
-                  int temp = DHT.temperature; 
-                  int humidity = DHT.humidity;
-                  Serial.print("TEMP:");
-                  Serial.print(temp);
-                  Serial.print(",");
-                  Serial.print("HUM:");
-                  Serial.print(humidity);                 
-                }
-                // Retrofit an event                
-                break;
-    case DHTLIB_ERROR_CHECKSUM: 
-                Serial.print("Checksum error,\t"); 
-                break;
-    case DHTLIB_ERROR_TIMEOUT: 
-                Serial.print("Time out error,\t"); 
-                break;
-    default: 
-                Serial.print("Unknown error,\t"); 
-                break;
-  }
-}
-
-
 
 
 
 void loop() 
 {
+    //gEM.queueEvent( EventManager::kEventUser0, 0);
+    
     // Handle any events that are in the queue
     gEM.processEvent();
     // Push a blinker and a sensor check
-    if ( ( millis() - lastToggledBlinker ) > 2000 ) 
+    if ( ( millis() - lastToggledBlinker ) > 500 ) 
     {      
       gEM.queueEvent( EventManager::kEventUser1, lastBlinkCmd);
       if(lastBlinkCmd==BlinkOn) { 
@@ -107,12 +87,27 @@ void loop()
       }else{
         lastBlinkCmd=BlinkOn;
       }
-      gEM.queueEvent( EventManager::kEventUser0, DHT11_PIN);
+      
     }
-    // Push another event after 2000 sec
     
-    delay(2000);
-       
+    
+    /*** FADER PART */
+   analogWrite(led, brightness);    
+
+    // change the brightness for next time through the loop:
+    brightness = brightness + fadeAmount;
+  
+    // reverse the direction of the fading at the ends of the fade: 
+    if (brightness == 0 || brightness == 255) {
+      fadeAmount = -fadeAmount ; 
+      // Fire the TADA then black
+      if(brightness ==255) gEM.queueEvent( EventManager::kEventUser0, 0); 
+    }     
+    // wait for 30 or 90 milliseconds to see the dimming effect    
+    delay(90);
+    // Narcoleptic did not work well here 
+    //Narcoleptic.delay(150);
+    
 
 }
 
