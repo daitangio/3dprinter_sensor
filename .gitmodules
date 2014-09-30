@@ -1,6 +1,3 @@
-[submodule "EventManager"]
-	path = EventManager
-	url = https://daitangio@github.com/daitangio/arduino-EventManager
 [submodule "Webduino"]
 	path = Webduino
 	url = https://daitangio@github.com/daitangio/Webduino
