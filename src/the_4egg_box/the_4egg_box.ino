@@ -9,7 +9,7 @@ EventManager gEM( EventManager::kNotInterruptSafe );
 
 // Boot Music
 void taDa(int event, int p){
-  Serial.println("TADA!");
+  //Serial.println("TADA!");
   tone(speakerOut,NOTE_SI5);
   delay(100);
   tone(speakerOut,NOTE_LA4);
@@ -27,8 +27,9 @@ enum BlinkCmd {
 };
 
 /*** FADER**/
-int led = 9;           // the pin that the LED is attached to
-int brightness = 0;    // how bright the LED is
+int fadeLeds = 9;           // the pin that the LED is attached to
+int reverseFadeLed=6;      // Reverse pin
+int brightness = 120;    // how bright the LED is
 int fadeAmount = 5;    // how many points to fade the LED by
 
 
@@ -39,7 +40,8 @@ int fadeAmount = 5;    // how many points to fade the LED by
 void setup(){  
  pinMode(13, OUTPUT);
  pinMode(speakerOut, OUTPUT);
- pinMode(led, OUTPUT);
+ pinMode(fadeLeds, OUTPUT);
+ pinMode(reverseFadeLed,OUTPUT);
  Serial.begin(9600);
  Serial.println("The 4EggBox");
  Serial.println();
@@ -50,7 +52,7 @@ void setup(){
  gEM.queueEvent( EventManager::kEventUser0, 0);
 }
 
-unsigned long lastToggledBlinker;
+unsigned long lastToggfadeLedsBlinker;
 BlinkCmd lastBlinkCmd=BlinkOn;
 
 void blinker(int event, int cmd){
@@ -65,12 +67,12 @@ void blinker(int event, int cmd){
     default:
        Serial.println("blinker error unkown command:"+cmd);
   }
-  lastToggledBlinker=millis();
+  lastToggfadeLedsBlinker=millis();
 }
 
 
 
-
+// #define DEBUG yeppa
 
 void loop() 
 {
@@ -78,8 +80,9 @@ void loop()
     
     // Handle any events that are in the queue
     gEM.processEvent();
+    #ifdef DEBUG
     // Push a blinker and a sensor check
-    if ( ( millis() - lastToggledBlinker ) > 500 ) 
+    if ( ( millis() - lastToggfadeLedsBlinker ) > 500 ) 
     {      
       gEM.queueEvent( EventManager::kEventUser1, lastBlinkCmd);
       if(lastBlinkCmd==BlinkOn) { 
@@ -89,24 +92,29 @@ void loop()
       }
       
     }
-    
+    #endif
     
     /*** FADER PART */
-   analogWrite(led, brightness);    
+   analogWrite(fadeLeds, brightness);    
+   analogWrite(reverseFadeLed, 255- brightness);
 
     // change the brightness for next time through the loop:
     brightness = brightness + fadeAmount;
-  
+    #ifdef DEBUG
+    Serial.print(fadeAmount);
+    Serial.print(" ");
+    Serial.println(brightness);
+    #endif
     // reverse the direction of the fading at the ends of the fade: 
-    if (brightness == 0 || brightness == 255) {
+    if (brightness <= 50 || brightness >= 255) {
       fadeAmount = -fadeAmount ; 
       // Fire the TADA then black
       if(brightness ==255) gEM.queueEvent( EventManager::kEventUser0, 0); 
     }     
     // wait for 30 or 90 milliseconds to see the dimming effect    
-    delay(90);
+    delay(90); // was 90
     // Narcoleptic did not work well here 
-    //Narcoleptic.delay(150);
+    //Narcoleptic.delay(40);
     
 
 }
