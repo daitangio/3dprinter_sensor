@@ -40,15 +40,15 @@ enum BlinkCmd {
 
 /*** FADER**/
 int fadeLeds = 9;           // the pin that the LED is attached to
-int reverseFadeLed=6;      // Reverse pin
-int lg3=5;  //ledgroup 3 
-
+int greenLed=6;      // Reverse pin
+int blueLed=5;  //ledgroup 3 
+const int DelayTime=44; //was 90
 
 void setup(){  
  pinMode(13, OUTPUT);
  pinMode(speakerOut, OUTPUT);
  pinMode(fadeLeds, OUTPUT);
- pinMode(reverseFadeLed,OUTPUT);
+ pinMode(greenLed,OUTPUT);
  taDa();
  Serial.begin(9600);
  Serial.println("The 4EggBox");
@@ -65,9 +65,25 @@ void fadeOut(int pin){
   while(brightness >0 ){
     brightness = brightness + fadeAmount;
     analogWrite(pin, brightness);
-    delay(90);
+    delay(DelayTime);
   }
 }
+
+
+void fadeOut3(int pin1,int pin2, int pin3){
+  int brightness = 255;    // how bright the LED is
+  int fadeAmount = -5;    // how many points to fade the LED by
+  
+  while(brightness >0 ){
+    brightness = brightness + fadeAmount;
+    analogWrite(pin1, brightness);
+    analogWrite(pin2, brightness);
+    analogWrite(pin3, brightness);
+    delay(DelayTime);
+  }
+}
+
+
 
 void fadeIn(int pin){
   int brightness = 0;    // how bright the LED is
@@ -76,7 +92,7 @@ void fadeIn(int pin){
   while(brightness <255 ){
     brightness = brightness + fadeAmount;
     analogWrite(pin, brightness);
-    delay(90);
+    delay(DelayTime);
   }
 }
 
@@ -91,9 +107,21 @@ void loop()
 
     fadeIn(fadeLeds);
     fadeOut(fadeLeds);
-    fadeIn(reverseFadeLed);
-    fadeOut(reverseFadeLed);
-    fadeIn(lg3);
-    fadeOut(lg3);
+    fadeIn(greenLed);
+    fadeOut(greenLed);
+    fadeIn(blueLed);
+    //fadeOut(blueLed);
+    fadeIn(greenLed);
+    fadeIn(fadeLeds);
+    // TODO Replace with a global fade out:
+    // fadeOut(blueLed);
+    fadeOut3(blueLed,fadeLeds,greenLed);
+    
+    // turn off all
+    analogWrite(greenLed,0);
+    analogWrite(fadeLeds,0);
+    analogWrite(blueLed,0);
+    delay(DelayTime);
+ 
 }
 
