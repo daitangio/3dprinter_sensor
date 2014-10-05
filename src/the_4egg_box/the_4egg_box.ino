@@ -95,7 +95,7 @@ void loop()
     #endif
     
     /*** FADER PART */
-   analogWrite(fadeLeds, brightness);    
+   analogWrite(fadeLeds, brightness);       
    analogWrite(reverseFadeLed, 255- brightness);
 
     // change the brightness for next time through the loop:
