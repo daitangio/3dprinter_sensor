@@ -13,6 +13,7 @@ const int DelayTime=35; // 44 is good
 
 // Boot Music
 void taDa(){
+  
   //Serial.println("TADA!");
   play(NOTE_SI5);
   play(NOTE_LA4);
@@ -30,8 +31,11 @@ void taDa(){
   play(NOTE_SI2);*/
   playLong(NOTE_DO2);
   
-  
 }
+
+//TODO:  Rotating flashes for super duper start
+//Make a ball of light spinning under the 3 led, slower then faster then disapear
+
 
 void play(int n){
   analogWrite(greenLed,0);
